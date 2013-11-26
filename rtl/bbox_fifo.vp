@@ -1,0 +1,273 @@
+/*
+ *  Bounding Box FIFO
+ */
+
+/******************************************************************************
+ * PARAMETERIZATION
+ * ***************************************************************************/
+//; # module parameters
+//; my $sig_fig    = parameter(Name=>'SigFig',
+//;                            Val=>24, Min=>1, Step=>1, 
+//;                            Doc=>"Bits in color and position.");
+//; my $radix      = parameter(Name=>'Radix',
+//;                            Val=>10, Min=>1, Step=>1, 
+//;                            Doc=>"Fraction bits in color and position");
+//; my $verts      = parameter(Name=>'Vertices',
+//;                            Val=>3, Min=>3, Step=>1, 
+//;                            Doc=>"Maximum Vertices in micropolygon");
+//; my $axis       = parameter(Name=>'Axis',
+//;                            Val=>3, Min=>1, Step=>1, 
+//;                            Doc=>"Number of axis foreach vertex 3 is (x,y,z).");
+//; my $colors     = parameter(Name=>'Colors',
+//;                            Val=>3, Min=>1, Step=>1, 
+//;                            Doc=>"Number of color channels");
+//; my $pipe_depth = parameter(Name=>'PipelineDepth',
+//;                            Val=>1, Min=>1, Max=>1, Step=>1, 
+//;                            Doc=>"How many pipe stages are in this block");
+//; my $mod_FSM = parameter(Name=>'ModifiedFSM',
+//;                            Val=>'NO', List=>['YES', 'NO'],
+//;                            Doc=>"Use Modified FSM to eliminate a wait state");
+//;
+//; # Convert a Fixed Point Number to a Floating
+//; sub unFix {
+//;   my $signal_name = shift @_;
+//;   my $radix = shift @_;
+//;   return " 1.0 * $signal_name / ( 128\'d1 << $radix ) ";
+//; }
+
+/* A Note on Signal Names:
+ *
+ * Most signals have a suffix of the form _RxxN 
+ * where R indicates that it is a Raster Block signal
+ * xx indicates the clock slice that it belongs to
+ * and N indicates the type of signal that it is.
+ * H indicates logic high, L indicates logic low,
+ * U indicates unsigned fixed point, and S indicates
+ * signed fixed point.
+ * 
+ */
+module `mname()`
+   (
+      //Input Signals
+      input logic signed [`$sig_fig`-1:0]    poly_R12S[`$verts`-1:0][`$axis`-1:0], //Micropolygon to Iterate Over
+      input logic unsigned [`$sig_fig`-1:0]  color_R12U[`$colors`-1:0] , //Color of Poly
+      input logic                            isQuad_R12H, //Micropolygon is quad
+      input logic signed [`$sig_fig`-1:0]    box_R12S[1:0][1:0], //Box to iterate for subsamples
+      input logic                            validPoly_R12H, //Micropolygon is valid
+
+      //Control Signals
+      input logic [3:0]  subSample_RnnnnU , // Subsample width 
+      input logic        holdPoly_RnnnnL,   // Stop feeding the test iterator
+      output logic       halt_RnnnnL,       // Halt previous stages
+
+      // Note that this block generates
+      // Global Signals
+      input logic             clk, // Clock
+      input logic             rst, // Reset
+
+      output logic signed [`$sig_fig`-1:0]    poly_R13S[`$verts`-1:0][`$axis`-1:0], //Micropolygon to Iterate Over
+      output logic unsigned [`$sig_fig`-1:0]  color_R13U[`$colors`-1:0] , //Color of Poly
+      output logic                            isQuad_R13H, //Micropolygon is quad
+      output logic signed [`$sig_fig`-1:0]    box_R13S[1:0][1:0], //Box to iterate for subsamples
+      output logic                            validPoly_R13H     //Micropolygon is valid
+   );
+
+   logic signed   [`$sig_fig`-1:0]    poly_fifo_R13S[4:0][`$verts`-1:0][`$axis`-1:0];
+   logic unsigned [`$sig_fig`-1:0]   color_fifo_R13U[4:0][`$colors`-1:0];
+   logic signed                     isQuad_fifo_R13H[4:0];
+   logic signed   [`$sig_fig`-1:0]     box_fifo_R13S[4:0][1:0][1:0];
+   logic signed                    isValid_fifo_R13H[4:0];
+
+   logic signed   [`$sig_fig`-1:0]    next_poly_fifo_R13S[4:0][`$verts`-1:0][`$axis`-1:0];
+   logic unsigned [`$sig_fig`-1:0]   next_color_fifo_R13U[4:0][`$colors`-1:0];
+   logic signed                     next_isQuad_fifo_R13H[4:0];
+   logic signed   [`$sig_fig`-1:0]     next_box_fifo_R13S[4:0][1:0][1:0];
+   logic signed                    next_isValid_fifo_R13H[4:0];
+
+   logic unsigned [2:0] fifo_head_R13U;
+   logic unsigned [2:0] next_fifo_head_R13U;
+
+   logic unsigned [2:0] fifo_size_R13H;
+   logic unsigned [2:0] next_fifo_size_R13H;
+   logic fifo_full_R13H;
+   logic next_fifo_full_R13H;
+
+   logic iter_reading;
+
+   logic unsigned [2:0] fifo_target_address;
+
+   //; my $d1 = generate( 'dff4', "d1", 
+   //;                    BitWidth=>$sig_fig,
+   //;                    PipelineDepth=>1,
+   //;                    ArraySize1=>5,
+   //;                    ArraySize2=>$verts,
+   //;                    ArraySize3=>$axis,
+   //;                    Retime=>'YES' );
+   `$d1->instantiate()` (
+           .in(next_poly_fifo_R13S) , 
+           .clk(clk) , .reset(rst), .en(1'b1),
+           .out(poly_fifo_R13S));
+
+   //; my $d2 = generate( 'dff3', "d2", 
+   //;                    BitWidth=>$sig_fig,
+   //;                    PipelineDepth=>1,
+   //;                    ArraySize1=>5,
+   //;                    ArraySize2=>$colors,
+   //;                    Retime=>'YES' );
+   `$d2->instantiate()` (
+           .in(next_color_fifo_R13U) , 
+           .clk(clk) , .reset(rst), .en(1'b1),
+           .out(color_fifo_R13U));
+
+   //; my $d3 = generate( 'dff2', "d3", 
+   //;                    BitWidth=>1,
+   //;                    PipelineDepth=>1,
+   //;                    ArraySize1=>5,
+   //;                    Retime=>'YES' );
+   `$d3->instantiate()` (
+           .in(next_isQuad_fifo_R13H) , 
+           .clk(clk) , .reset(rst), .en(1'b1),
+           .out(isQuad_fifo_R13H));
+
+   //; my $d4 = generate( 'dff4', "d4", 
+   //;                    BitWidth=>$sig_fig,
+   //;                    PipelineDepth=>1,
+   //;                    ArraySize1=>5,
+   //;                    ArraySize2=>2,
+   //;                    ArraySize3=>2,
+   //;                    Retime=>'YES' );
+   `$d4->instantiate()` (
+           .in(next_box_fifo_R13S) , 
+           .clk(clk) , .reset(rst), .en(1'b1),
+           .out(box_fifo_R13S));
+
+   //; my $d5 = generate( 'dff2', "d5", 
+   //;                    BitWidth=>1,
+   //;                    PipelineDepth=>1,
+   //;                    ArraySize1=>5,
+   //;                    Retime=>'YES' );
+   `$d5->instantiate()` (
+           .in(next_isValid_fifo_R13H) , 
+           .clk(clk) , .reset(rst), .en(1'b1),
+           .out(isValid_fifo_R13H));
+
+   //; my $d6 = generate( 'dff', "d6", 
+   //;                    BitWidth=>1,
+   //;                    PipelineDepth=>1,
+   //;                    Retime=>'YES' );
+   logic next_haltL;
+   logic haltL;
+   `$d6->instantiate()` (
+           .in(next_haltL) , 
+           .clk(clk) , .reset(rst), .en(1'b1),
+           .out(haltL));
+
+   //; my $d7 = generate( 'dff', "d7", 
+   //;                    BitWidth=>3,
+   //;                    PipelineDepth=>1,
+   //;                    Retime=>'YES' );
+   `$d7->instantiate()` (
+           .in(next_fifo_head_R13U) , 
+           .clk(clk) , .reset(rst), .en(1'b1),
+           .out(fifo_head_R13U));
+
+   //; my $d8 = generate( 'dff', "d8", 
+   //;                    BitWidth=>3,
+   //;                    PipelineDepth=>1,
+   //;                    Retime=>'YES' );
+   `$d8->instantiate()` (
+           .in(next_fifo_size_R13H) , 
+           .clk(clk) , .reset(rst), .en(1'b1),
+           .out(fifo_size_R13H));
+
+   //; my $d9 = generate( 'dff', "d9", 
+   //;                    BitWidth=>1,
+   //;                    PipelineDepth=>1,
+   //;                    Retime=>'YES' );
+   `$d9->instantiate()` (
+           .in(next_fifo_full_R13H) , 
+           .clk(clk) , .reset(rst), .en(1'b1),
+           .out(fifo_full_R13H));
+
+   // Connect outputs to FIFOs
+   always_comb begin
+      poly_R13S      = poly_fifo_R13S[fifo_head_R13U];
+      color_R13U     = color_fifo_R13U[fifo_head_R13U];
+      isQuad_R13H    = isQuad_fifo_R13H[fifo_head_R13U];
+      box_R13S       = box_fifo_R13S[fifo_head_R13U];
+      validPoly_R13H = isValid_fifo_R13H[fifo_head_R13U];
+   end
+
+   // Connect inputs
+   always_comb begin
+      iter_reading = holdPoly_RnnnnL;
+      fifo_target_address = (fifo_head_R13U+fifo_size_R13H)%5;
+
+      if (iter_reading | ~fifo_full_R13H) begin
+         next_poly_fifo_R13S[fifo_target_address]    = poly_R12S;
+         next_color_fifo_R13U[fifo_target_address]   = color_R12U;
+         next_isQuad_fifo_R13H[fifo_target_address]  = isQuad_R12H;
+         next_box_fifo_R13S[fifo_target_address]     = box_R12S;
+         next_isValid_fifo_R13H[fifo_target_address] = validPoly_R12H;
+
+         // Fill in other next_isValids
+         next_isValid_fifo_R13H[(fifo_target_address+1)%5] =
+            isValid_fifo_R13H[(fifo_target_address+1)%5];
+         next_isValid_fifo_R13H[(fifo_target_address+2)%5] =
+            isValid_fifo_R13H[(fifo_target_address+2)%5];
+         next_isValid_fifo_R13H[(fifo_target_address+3)%5] =
+            isValid_fifo_R13H[(fifo_target_address+3)%5];
+         next_isValid_fifo_R13H[(fifo_target_address+4)%5] =
+            isValid_fifo_R13H[(fifo_target_address+4)%5];
+
+         if (iter_reading) begin
+            // Iterator is trying to read
+            if (validPoly_R13H) begin
+               // It's trying to read a valid bbox. Did I just read a valid
+               // bbox?
+               next_fifo_head_R13U = (fifo_head_R13U+1)%5;
+               if (validPoly_R12H) begin
+                  // Popping off and pushing on simultaneously
+                  next_fifo_size_R13H = fifo_size_R13H;
+               end else begin
+                  // Only popping off. Pushed on an invalid entry.
+                  next_fifo_size_R13H = fifo_size_R13H-1;
+               end
+            end else begin
+               // The bbox it's trying to read is invalid. So, we're empty?
+               next_fifo_head_R13U = fifo_head_R13U;
+               if (validPoly_R12H) begin
+                  next_fifo_size_R13H = (fifo_size_R13H+1)%5;
+               end else begin
+                  next_fifo_size_R13H = 0;
+               end
+            end
+         end else begin
+            // Iterator isn't trying to read. Did we just read a valid entry?
+            next_fifo_head_R13U = fifo_head_R13U;
+            if (validPoly_R12H) begin
+               next_fifo_size_R13H = fifo_size_R13H+1;
+            end else begin
+               next_fifo_size_R13H = fifo_size_R13H;
+            end
+         end
+
+         halt_RnnnnL = 1'b1;
+      end else begin
+         next_poly_fifo_R13S    = poly_fifo_R13S;
+         next_color_fifo_R13U   = color_fifo_R13U;
+         next_isQuad_fifo_R13H  = isQuad_fifo_R13H;
+         next_box_fifo_R13S     = box_fifo_R13S;
+         next_isValid_fifo_R13H = isValid_fifo_R13H;
+
+         next_fifo_head_R13U = fifo_head_R13U;
+         next_fifo_size_R13H = fifo_size_R13H;
+
+         halt_RnnnnL = haltL;
+      end
+
+      next_fifo_full_R13H = (next_fifo_size_R13H == 5);
+
+      next_haltL = ~next_fifo_full_R13H;
+   end
+endmodule

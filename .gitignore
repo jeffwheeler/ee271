@@ -1,0 +1,14 @@
+._*
+*.dat
+*.log
+*.ppm
+*.tcl
+*.swp
+*.vpd
+csrc/
+DVEfiles/
+synth/
+sb_log/
+.DS_Store
+genesis*
+sim*
