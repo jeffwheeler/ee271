@@ -122,7 +122,7 @@ module `mname()`
    
    //Check that Bounding Box is Correct
    always @(posedge clk) begin
-      if( validPoly_RnnH ) begin //check only when the polygon is valid
+     /* if( validPoly_RnnH ) begin //check only when the polygon is valid
 	 if(one != rastBBox_bbox_check( 
 				     int'(poly_RnnS[0][0]), //uPoly
 				     int'(poly_RnnS[0][1]), //uPoly
@@ -183,7 +183,7 @@ module `mname()`
 	    end
 	   assert(0) else $error("@%0t: ERROR: Bounding Box Check Failed", $time);
 	end // if (one != rastBBox_bbox_check(...
-      end // if ( validPoly_R12H )
+      end // if ( validPoly_R12H ) */
    end // always @ (posedge clk)
 
    
