@@ -56,9 +56,6 @@
  * PARAMETERIZATION
  * ***************************************************************************/
 //; # module parameters
-//; my $fifo_size  = parameter(Name=>'FifoSize',
-//;                            Val=>5, Min=>1, Step=>1, 
-//;                            Doc=>"Number of entries in our FIFOs");
 //; my $sig_fig    = parameter(Name=>'SigFig',
 //;                            Val=>24, Min=>1, Step=>1, 
 //;                            Doc=>"Bits in color and position.");
@@ -78,7 +75,7 @@
 //;                            Val=>1, Min=>1, Max=>1, Step=>1, 
 //;                            Doc=>"How many pipe stages are in this block");
 //; my $mod_FSM = parameter(Name=>'ModifiedFSM',
-//;                            Val=>'YES', List=>['YES', 'NO'],
+//;                            Val=>'NO', List=>['YES', 'NO'],
 //;                            Doc=>"Use Modified FSM to eliminate a wait state");
 //;
 //; # Convert a Fixed Point Number to a Floating
@@ -111,8 +108,8 @@ module `mname()`
    input logic 				validPoly_R13H, //Micropolygon is valid
 
    //Control Signals
-   input logic [3:0]          subSample_RnnnnU , //Subsample width 
-   output logic               holdPoly_RnnnnL,   //Halt -> hold current micropoly
+   input logic [3:0] 			subSample_RnnnnU , //Subsample width 
+   output logic 			halt_RnnnnL , //Halt -> hold current micropoly
    //Note that this block generates
    //Global Signals
    input logic 				clk, // Clock
@@ -125,23 +122,24 @@ module `mname()`
    output logic 			isQuad_R14H, //Micropygon is quad
    output logic 			validSamp_R14H                   //Sample and Micropolygon are Valid
    );
-
-
+   
+   
    // This module implement a Moore machine to iterarte sample points in bbox
    // Recall: a Moore machine is an FSM whose output values are determined 
    // solely by its current state.
    // A simple way to build a Moore machine is to make states for every output
    // and the values of the current states are the outputs themselves
-
+   
    // Now we create the signals for the next states of each outputs and 
    // then instantiate registers for storing these states
-   logic signed [`$sig_fig`-1:0]    next_poly_R14S[`$verts`-1:0][`$axis`-1:0];
-   logic unsigned  [`$sig_fig`-1:0] next_color_R14U[`$colors`-1:0];
-   logic signed [`$sig_fig`-1:0]    next_sample_R14S[1:0];
-   logic             next_isQuad_R14H;
-   logic             next_validSamp_R14H;
-   logic             next_halt_RnnnnL;
-
+   logic signed [`$sig_fig`-1:0] 	next_poly_R14S[`$verts`-1:0][`$axis`-1:0]; 
+   logic unsigned  [`$sig_fig`-1:0] next_color_R14U[`$colors`-1:0] ;
+   logic signed [`$sig_fig`-1:0] 	next_sample_R14S[1:0];  
+   logic 				next_isQuad_R14H;                   
+   logic 				next_validSamp_R14H;                 
+   logic 				next_halt_RnnnnL;
+   
+   
    // Instantiate registers for storing these states
    //; my $d301 = generate( 'dff3', "d301", 
    //;                        BitWidth=>$sig_fig,
@@ -150,10 +148,10 @@ module `mname()`
    //;                        PipelineDepth=>1,
    //;                        Retime=>'YES' );
    `$d301->instantiate()`(
-           .in(next_poly_R14S) , 
-           .clk(clk) , .reset(rst), .en(1'b1),
-           .out(poly_R14S));
-
+			  .in(next_poly_R14S) , 
+			  .clk(clk) , .reset(rst), .en(1'b1),
+			  .out(poly_R14S));
+   
    //; my $d302 = generate( 'dff2', "d302", 
    //;                        BitWidth=>$sig_fig,
    //;                        ArraySize1=>$colors,
@@ -173,7 +171,7 @@ module `mname()`
 			   .in(next_sample_R14S) , 
 			   .clk(clk) , .reset(rst), .en(1'b1),
 			   .out(sample_R14S));				 
-
+   
    //; my $d304 = generate( 'dff', "d304", 
    //;                        BitWidth=>3,
    //;                        PipelineDepth=>1,
@@ -181,22 +179,21 @@ module `mname()`
    `$d304->instantiate()` (
 			   .in({next_validSamp_R14H, next_isQuad_R14H, next_halt_RnnnnL}) , 
 			   .clk(clk) , .reset(rst), .en(1'b1),
-			   .out({validSamp_R14H, isQuad_R14H, holdPoly_RnnnnL}));
+			   .out({validSamp_R14H, isQuad_R14H, halt_RnnnnL}));
    // Instantiate registers for storing these states
+  
 
-
-   // Instantiate registers for storing these states
-
+  
    //; if ($mod_FSM eq 'NO') {
-
+   
    //////
    //////  RTL code for original FSM Goes Here
    //////
-
+   
    // To build this FSM we want to have two more state: one is the working
    // status of this FSM, and the other is the current bounding box where
    // we iterate sample points
-
+	
    // defin two more states, box_R14S and state_R14H
    logic signed [`$sig_fig`-1:0] 	box_R14S[1:0][1:0];    		// the state for current bounding box
    logic signed [`$sig_fig`-1:0] 	next_box_R14S[1:0][1:0];
@@ -262,52 +259,52 @@ module `mname()`
    assign  next_up_samp_R14S[1][`$sig_fig`-1:`$radix`-3] = sample_R14S[1][`$sig_fig`-1:`$radix`-3]
      +  { '0 , subSample_RnnnnU } ; // Y-Val is Increment      
 
-   // State Machine Control
+
+
+   //State Machine Control
    always_comb begin
       unique case( state_R14H )
-         ( WAIT_STATE ): begin
-            next_sample_R14S    = box_R13S[0];  
-            next_validSamp_R14H = validPoly_R13H ;
-            next_isQuad_R14H    = isQuad_R13H;
-            next_state_R14H     = validPoly_R13H ? TEST_STATE : WAIT_STATE;
-            next_poly_R14S      = poly_R13S ;
-            next_color_R14U     = color_R13U ;
-            next_box_R14S       = box_R13S ;
-            next_halt_RnnnnL    = ~validPoly_R13H ; // halt for new uPoly
-         end
-         ( TEST_STATE ): begin
-            next_sample_R14S    =  at_right_edg_R14H ?  next_up_samp_R14S 
-                    : next_rt_samp_R14S ;  
-            next_validSamp_R14H =  ~at_end_box_R14H ; 
-            next_isQuad_R14H    =   isQuad_R14H ;
-            next_state_R14H     =   at_end_box_R14H ? WAIT_STATE 
-                     : TEST_STATE ;
-            next_poly_R14S      =   poly_R14S ;
-            next_color_R14U     =   color_R14U ;
-            next_box_R14S       =   box_R14S ; 
-            next_halt_RnnnnL    =   at_end_box_R14H  ; //unHalt when done
-         end
-         default: begin
-            next_state_R14H = WAIT_STATE;
-         end
+        ( WAIT_STATE ): begin
+	   next_sample_R14S    = box_R13S[0];  
+	   next_validSamp_R14H = validPoly_R13H ;
+	   next_isQuad_R14H    = isQuad_R13H;
+	   next_state_R14H     = validPoly_R13H ? TEST_STATE 
+				 : WAIT_STATE;
+	   next_poly_R14S      = poly_R13S ;
+	   next_color_R14U     = color_R13U ;
+	   next_box_R14S       = box_R13S ;
+	   next_halt_RnnnnL    = ~validPoly_R13H ; // halt for new uPoly
+	end
+	( TEST_STATE ): begin
+	   next_sample_R14S    =  at_right_edg_R14H ?  next_up_samp_R14S 
+				  : next_rt_samp_R14S ;  
+	   next_validSamp_R14H =  ~at_end_box_R14H ; 
+	   next_isQuad_R14H    =   isQuad_R14H ;
+	   next_state_R14H     =   at_end_box_R14H ? WAIT_STATE 
+				   : TEST_STATE ;
+	   next_poly_R14S      =   poly_R14S ;
+	   next_color_R14U     =   color_R14U ;
+	   next_box_R14S       =   box_R14S ; 
+	   next_halt_RnnnnL    =   at_end_box_R14H  ; //unHalt when done
+	end      
       endcase // case ( state_R14H )
       
    end //always_comb
-
-
+   
+   
    //////
    //////  RTL code for original FSM Goes Here
    //////
-
+   
    //; } else { # use Modified FSM
-
+   
    //////
    //////  RTL code for modified FSM Goes Here
    //////
-
+   
    ////// PLACE YOUR CODE HERE 
-
-
+   
+   
    // defin two more states, box_R14S and state_R14H
    logic signed [`$sig_fig`-1:0] 	box_R14S[1:0][1:0];
    logic signed [`$sig_fig`-1:0] 	next_box_R14S[1:0][1:0];

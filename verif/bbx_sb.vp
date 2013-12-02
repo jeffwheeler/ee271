@@ -81,10 +81,10 @@ module `mname()`
   input logic              validPoly_R10H , // Valid Data for Operation
   input logic              isQuad_R10H , // Is Poly Quad?
 
-  input logic signed [`$sig_fig`-1:0] box_R12S[1:0][1:0] , // 2 Sets X,Y Fixed Point Values
-  input logic signed [`$sig_fig`-1:0] poly_R12S[`$verts`-1:0][`$axis`-1:0] , // 4 Sets X,Y Fixed Point Values
-  input logic              validPoly_R12H , // Valid Data for Operation
-  input logic              isQuad_R12H , // Is Poly Quad?
+  input logic signed [`$sig_fig`-1:0] box_R13S[1:0][1:0] , // 2 Sets X,Y Fixed Point Values
+  input logic signed [`$sig_fig`-1:0] poly_R13S[`$verts`-1:0][`$axis`-1:0] , // 4 Sets X,Y Fixed Point Values
+  input logic              validPoly_R13H , // Valid Data for Operation
+  input logic              isQuad_R13H , // Is Poly Quad?
   input logic [1:0][1:0]   invalidate_R10H,
   input logic              clk , // Clock 
   input logic              rst , // Reset
@@ -226,12 +226,12 @@ module `mname()`
    endproperty
 
    //Check that signals should match
-   assert property( sig_eq_con( rst, poly_RnnS[0][0] , poly_R12S[0][0]  , validPoly_RnnH )); 
-   assert property( sig_eq_con( rst, poly_RnnS[0][1] , poly_R12S[0][1]  , validPoly_RnnH )); 
-   assert property( sig_eq_con( rst, poly_RnnS[1][0] , poly_R12S[1][0]  , validPoly_RnnH )); 
-   assert property( sig_eq_con( rst, poly_RnnS[1][1] , poly_R12S[1][1]  , validPoly_RnnH )); 
-   assert property( sig_eq_con( rst, poly_RnnS[2][0] , poly_R12S[2][0]  , validPoly_RnnH )); 
-   assert property( sig_eq_con( rst, poly_RnnS[2][1] , poly_R12S[2][1]  , validPoly_RnnH )); 
-   assert property( sig_eq_con( rst, isQuad_RnnH     , isQuad_R12H      , validPoly_RnnH )); 
+   assert property( sig_eq_con( rst, poly_RnnS[0][0] , poly_R13S[0][0]  , validPoly_RnnH )); 
+   assert property( sig_eq_con( rst, poly_RnnS[0][1] , poly_R13S[0][1]  , validPoly_RnnH )); 
+   assert property( sig_eq_con( rst, poly_RnnS[1][0] , poly_R13S[1][0]  , validPoly_RnnH )); 
+   assert property( sig_eq_con( rst, poly_RnnS[1][1] , poly_R13S[1][1]  , validPoly_RnnH )); 
+   assert property( sig_eq_con( rst, poly_RnnS[2][0] , poly_R13S[2][0]  , validPoly_RnnH )); 
+   assert property( sig_eq_con( rst, poly_RnnS[2][1] , poly_R13S[2][1]  , validPoly_RnnH )); 
+   assert property( sig_eq_con( rst, isQuad_RnnH     , isQuad_R13H      , validPoly_RnnH )); 
  
 endmodule 

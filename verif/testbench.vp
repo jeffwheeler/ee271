@@ -174,16 +174,16 @@ module `mname()`
 		   .validPoly_R10H(validPoly_R10H),             // Input: Valid Polygon
 	   	   .isQuad_R10H(isQuad_R10H) ,                  // Input: Is Poly Quad?
 
-		   .poly_R12S(`$dut_obj->get_instance_path()`.poly_R12S) ,            // Input: 4 Sets X,Y Fixed Point Values
-		   .box_R12S(`$dut_obj->get_instance_path()`.box_R12S),		// Input: Bound Box
-		   .validPoly_R12H(`$dut_obj->get_instance_path()`.validPoly_R12H) ,  // Input: Valid Data for Operation
-		   .isQuad_R12H(`$dut_obj->get_instance_path()`.isQuad_R12H) ,        // Input: Is Poly Quad?
+		   .poly_R13S(`$dut_obj->get_instance_path()`.poly_R13S) ,            // Input: 4 Sets X,Y Fixed Point Values
+		   .box_R13S(`$dut_obj->get_instance_path()`.box_R13S),		// Input: Bound Box
+		   .validPoly_R13H(`$dut_obj->get_instance_path()`.validPoly_R13H) ,  // Input: Valid Data for Operation
+		   .isQuad_R13H(`$dut_obj->get_instance_path()`.isQuad_R13H) ,        // Input: Is Poly Quad?
 			       .invalidate_R10H(`$dut_obj->get_instance_path()`.bbox.invalidate_R10H),
 		   
 		   .clk(clk),                                   // Input: Clock 
 		   .rst(rst),                                   // Input: Reset
 		   
-		   .halt_RnnnnL(`$dut_obj->get_instance_path()`.halt_RnnnnL),         // Input: Halt Signal
+		   .halt_RnnnnL(`$dut_obj->get_instance_path()`.halt_RnnnnL),         // Input: Halt Signal			
 		   .screen_RnnnnS(screen_RnnnnS),               // Screen Size
 	           .subSample_RnnnnU (subSample_RnnnnU)         // Flag for subsample
 							       

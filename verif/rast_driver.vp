@@ -242,12 +242,9 @@ module `mname()`
 	 @(posedge clk);
 	 @(posedge clk);
 	 while( ! halt_RnnnnL ) @(posedge clk);
-	 @(posedge clk);
-	 @(posedge clk);
-	 while( ! halt_RnnnnL ) @(posedge clk);
 	 
 	 // Now let the pipe clean and finish
-	 repeat(100) @(posedge clk);
+	 repeat(10) @(posedge clk);
 	 TestFinish = 1'b1;
 	 $display("time=%10t ************** Driver Is Done *****************", $time);
 

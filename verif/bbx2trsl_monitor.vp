@@ -56,7 +56,7 @@ module `mname()` (
    input 		       isQuad_R13H,             // Is Poly Quad?
    input 		       clk ,                     // Clock 
    input 		       rst ,                     // Reset
-   input 		       holdPoly_RnnnnL              //Halt Signal  
+   input 		       halt_RnnnnL              //Halt Signal  
 		      );	      
    
    
@@ -80,7 +80,7 @@ module `mname()` (
 	 @(posedge clk);
 	 
 	 
-	 if( holdPoly_RnnnnL ) 
+	 if( halt_RnnnnL ) 
 	   begin
 	      if( validPoly_R13H ) begin
 		 $fwrite( file , "@%0t: " , $time );

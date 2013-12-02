@@ -142,11 +142,11 @@ module `mname()`
    input logic 				rst, // Reset
 
    //Outout Signals
-   output logic signed [`$sig_fig`-1:0] poly_R12S[`$verts`-1:0][`$axis`-1:0], // 4 Sets X,Y Fixed Point Values
-   output logic 			unsigned [`$sig_fig`-1:0] color_R12U[`$colors`-1:0] , // Color of Poly
-   output logic 			isQuad_R12H, // Is Poly Quad?
-   output logic signed [`$sig_fig`-1:0] box_R12S[1:0][1:0], // 2 Sets X,Y Fixed Point Values  
-   output logic 			validPoly_R12H                  // Valid Data for Operation
+   output logic signed [`$sig_fig`-1:0] poly_R13S[`$verts`-1:0][`$axis`-1:0], // 4 Sets X,Y Fixed Point Values
+   output logic 			unsigned [`$sig_fig`-1:0] color_R13U[`$colors`-1:0] , // Color of Poly
+   output logic 			isQuad_R13H, // Is Poly Quad?
+   output logic signed [`$sig_fig`-1:0] box_R13S[1:0][1:0], // 2 Sets X,Y Fixed Point Values  
+   output logic 			validPoly_R13H                  // Valid Data for Operation
    );
    
    
@@ -165,14 +165,15 @@ module `mname()`
    logic                                frontface_R10H;              // polygon is not backfacing
    logic signed [`$sig_fig`-1:0]        fronthelpA[1:0];
    logic signed [`$sig_fig`-1:0]        fronthelpB;
+
    //R10 Signals
    
    // output for retiming registers
-   logic signed [`$sig_fig`-1:0] 	poly_R12S_retime[`$verts`-1:0][`$axis`-1:0]; // 4 Sets X,Y Fixed Point Values
-   logic 				unsigned [`$sig_fig`-1:0] color_R12U_retime[`$colors`-1:0];        // Color of Poly
-   logic signed [`$sig_fig`-1:0] 	box_R12S_retime[1:0][1:0];             // 2 Sets X,Y Fixed Point Values  
-   logic 				isQuad_R12H_retime;                   // Is Poly Quad?
-   logic 				validPoly_R12H_retime ;                 // Valid Data for Operation
+   logic signed [`$sig_fig`-1:0] 	poly_R13S_retime[`$verts`-1:0][`$axis`-1:0]; // 4 Sets X,Y Fixed Point Values
+   logic 				unsigned [`$sig_fig`-1:0] color_R13U_retime[`$colors`-1:0];        // Color of Poly
+   logic signed [`$sig_fig`-1:0] 	box_R13S_retime[1:0][1:0];             // 2 Sets X,Y Fixed Point Values  
+   logic 				isQuad_R13H_retime;                   // Is Poly Quad?
+   logic 				validPoly_R13H_retime ;                 // Valid Data for Operation
    // output for retiming registers
 
    //; # if( $verts == 4 ) {
@@ -193,12 +194,11 @@ module `mname()`
 
    //Backface Culling
    always_comb begin
-
+   
    fronthelpA[0] = (poly_R10S[1][0]-poly_R10S[0][0]) * (poly_R10S[2][1]-poly_R10S[1][1]);
    fronthelpA[1] = (poly_R10S[2][0]-poly_R10S[1][0]) * (poly_R10S[1][1]-poly_R10S[0][1]);
    fronthelpB = fronthelpA[0]-fronthelpA[1];
    frontface_R10H = fronthelpB < 0;
-
 
    end //end always_comb Backface Culling
 
@@ -389,14 +389,10 @@ module `mname()`
    end
    //Select Between Screen Bounds and Rounded Bounds
    
-   always_comb begin
-
-      outvalid_R10H = ~( | invalidate_R10H ) & validPoly_R10H & frontface_R10H;
-
-   end
+   assign  outvalid_R10H = ~( | invalidate_R10H ) & validPoly_R10H & frontface_R10H;
 
    
-   //Flop Clamped Box to R12_retime with retiming registers
+   //Flop Clamped Box to R13_retime with retiming registers
    //; my $d_bbx_r1 = generate( 'dff3', "d_bbx_r1", 
    //;                        BitWidth=>$sig_fig,
    //;                        ArraySize1=>$verts,
@@ -406,7 +402,7 @@ module `mname()`
    `$d_bbx_r1->instantiate()` (
 			       .in(poly_R10S) , 
 			       .clk(clk) , .reset(rst), .en(halt_RnnnnL),
-			       .out(poly_R12S_retime));
+			       .out(poly_R13S_retime));
    
    //; my $d_bbx_r2 = generate( 'dff2', "d_bbx_r2", 
    //;                        BitWidth=>$sig_fig,
@@ -416,7 +412,7 @@ module `mname()`
    `$d_bbx_r2->instantiate()`(
 			      .in(color_R10U) , 
 			      .clk(clk) , .reset(rst), .en(halt_RnnnnL),
-			      .out(color_R12U_retime));
+			      .out(color_R13U_retime));
    
    //; my $d_bbx_r3 = generate( 'dff3', "d_bbx_r3", 
    //;                        BitWidth=>$sig_fig,
@@ -427,7 +423,7 @@ module `mname()`
    `$d_bbx_r3->instantiate()` (
 			       .in(out_box_R10S) , 
 			       .clk(clk) , .reset(rst), .en(halt_RnnnnL),
-			       .out(box_R12S_retime));
+			       .out(box_R13S_retime));
    
    //; my $d_bbx_r4 = generate( 'dff', "d_bbx_r4", 
    //;                        BitWidth=>2,
@@ -436,12 +432,12 @@ module `mname()`
    `$d_bbx_r4->instantiate()`(
 			      .in({isQuad_R10H, outvalid_R10H}) , 
 			      .clk(clk) , .reset(rst), .en(halt_RnnnnL),
-			      .out({isQuad_R12H_retime, validPoly_R12H_retime}));
-   //Flop Clamped Box to R12_retime with retiming registers
+			      .out({isQuad_R13H_retime, validPoly_R13H_retime}));
+   //Flop Clamped Box to R13_retime with retiming registers
    
    
    
-   //Flop R12_retime to R12 with fixed registers
+   //Flop R13_retime to R13 with fixed registers
    //; my $d_bbx_f1 = generate( 'dff3', "d_bbx_f1", 
    //;                        BitWidth=>$sig_fig,
    //;                        ArraySize1=>$verts,
@@ -449,9 +445,9 @@ module `mname()`
    //;                        PipelineDepth=>1,
    //;                        Retime=>'YES' );
    `$d_bbx_f1->instantiate()` (
-			       .in(poly_R12S_retime) , 
+			       .in(poly_R13S_retime) , 
 			       .clk(clk) , .reset(rst), .en(halt_RnnnnL),
-			       .out(poly_R12S));
+			       .out(poly_R13S));
    
    //; my $d_bbx_f2 = generate( 'dff2', "d_bbx_f2", 
    //;                        BitWidth=>$sig_fig,
@@ -459,9 +455,9 @@ module `mname()`
    //;                        PipelineDepth=>1,
    //;                        Retime=>'YES' );
    `$d_bbx_f2->instantiate()`(
-			      .in(color_R12U_retime) , 
+			      .in(color_R13U_retime) , 
 			      .clk(clk) , .reset(rst), .en(halt_RnnnnL),
-			      .out(color_R12U));
+			      .out(color_R13U));
    
    //; my $d_bbx_f3 = generate( 'dff3', "d_bbx_f3", 
    //;                        BitWidth=>$sig_fig,
@@ -470,19 +466,19 @@ module `mname()`
    //;                        PipelineDepth=>1,
    //;                        Retime=>'YES' );
    `$d_bbx_f3->instantiate()` (
-			       .in(box_R12S_retime) , 
+			       .in(box_R13S_retime) , 
 			       .clk(clk) , .reset(rst), .en(halt_RnnnnL),
-			       .out(box_R12S));
+			       .out(box_R13S));
    
    //; my $d_bbx_f4 = generate( 'dff', "d_bbx_f4", 
    //;                        BitWidth=>2,
    //;                        PipelineDepth=>1,
    //;                        Retime=>'YES' );
    `$d_bbx_f4->instantiate()`(
-			      .in({isQuad_R12H_retime, validPoly_R12H_retime}) , 
+			      .in({isQuad_R13H_retime, validPoly_R13H_retime}) , 
 			      .clk(clk) , .reset(rst), .en(halt_RnnnnL),
-			      .out({isQuad_R12H, validPoly_R12H}));
-   //Flop R12_retime to R12 with fixed registers
+			      .out({isQuad_R13H, validPoly_R13H}));
+   //Flop R13_retime to R13 with fixed registers
 
 
    //Error Checking Assertions
@@ -495,8 +491,8 @@ module `mname()`
    endproperty
 
    //Check that Lower Left of Bounding Box is less than equal Upper Right
-   assert property( rb_lt( rst, box_R12S[0][0] , box_R12S[1][0] , validPoly_R12H ));
-   assert property( rb_lt( rst, box_R12S[0][1] , box_R12S[1][1] , validPoly_R12H ));
+   assert property( rb_lt( rst, box_R13S[0][0] , box_R13S[1][0] , validPoly_R13H ));
+   assert property( rb_lt( rst, box_R13S[0][1] , box_R13S[1][1] , validPoly_R13H ));
    //Check that Lower Left of Bounding Box is less than equal Upper Right
    
    //Error Checking Assertions
